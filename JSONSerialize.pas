@@ -18,9 +18,14 @@ function JSONString(ARecordPtr, TypeInfoPtr: Pointer): string; overload;
 implementation
 
 uses
+{$IF CompilerVersion > 26} //Delphi XE6 or later.
+  System.JSON,
+{$ELSE}
+  Data.DBXJSON,
+  System.TypInfo,
+{$ENDIF}
   System.Classes,
   System.Generics.Collections,
-  System.JSON,
   System.Rtti,
   System.SysUtils;
 
@@ -39,6 +44,25 @@ end;
 
 function JSONSerializeObj(ptr, typinf: Pointer): TJSONObject; forward;
 function JSONSerializeInterface(intf: IInterface): TJSONObject; forward;
+
+function TryGetJSONValue(const Root: TJSONObject; const Path: string; var Value: TJSONValue): Boolean;
+begin
+{$IF CompilerVersion > 26} //Delphi XE6 or later.
+  Result := Root.TryGetValue(Path, Value);
+{$ELSE}
+  Value := Root.Get(Path).JsonValue;
+  Result := Assigned(Value);
+{$ENDIF}
+end;
+
+function GetJSONString(const Value: TJSONValue): string;
+begin
+{$IF CompilerVersion > 26} //Delphi XE6 or later.
+  Result := Value.ToJSON;
+{$ELSE}
+  Result := Value.ToString;
+{$ENDIF}
+end;
 
 class function ToJSON.FromValue(InValue: TValue): TJSONValue;
 var
@@ -69,7 +93,7 @@ begin
         Result := ((InValue.AsObject as TJSONValue).Clone as TJSONValue)
       else
         Result := JSONSerializeObj(InValue.AsObject, InValue.TypeInfo);
-      if Result.ToJSON = '{}' then
+      if GetJSONString(Result) = '{}' then
       begin
         FreeAndNil(Result);
       end;
@@ -77,13 +101,13 @@ begin
     tkRecord:
     begin
       Result := JSONSerializeObj(InValue.GetReferenceToRawData, InValue.TypeInfo);
-      if Result.ToJSON = '{}' then
+      if GetJSONString(Result) = '{}' then
         FreeAndNil(Result);
     end;
     tkInterface:
     begin
       Result := JSONSerializeInterface(InValue.AsInterface);
-      if Result.ToJSON = '{}' then
+      if GetJSONString(Result) = '{}' then
         FreeAndNil(Result);
     end;
     tkArray, tkDynArray:
@@ -96,7 +120,7 @@ begin
         if Assigned(AJSONValue) then
           (Result as TJSONArray).AddElement(AJSONValue);
       end;
-      if Result.ToJSON = '[]' then
+      if GetJSONString(Result) = '[]' then
         FreeAndNil(Result);
     end;
     else
@@ -120,7 +144,7 @@ begin
       ExtractStrings(['\','/'], [], PWideChar(JSONName), names);
       for I := 0 to Names.Count - 2 do
       begin
-        if not Root.TryGetValue(Names[I], Temp) then
+        if not TryGetJSONValue(Root, Names[I], Temp) then
         begin
           Temp := TJSONObject.Create;
           Root.AddPair(Names[I], Temp);
@@ -168,7 +192,7 @@ var
 begin
   json := JSONSerializeObj(obj, obj.ClassInfo);
   try
-    Result := json.ToJSON;
+    Result := GetJSONString(json);
   finally
     FreeAndNil(json);
   end;
@@ -180,7 +204,7 @@ var
 begin
   json := JSONSerializeInterface(intf);
   try
-    Result := json.ToJSON;
+    Result := GetJSONString(json);
   finally
     FreeAndNil(json);
   end;
@@ -192,7 +216,7 @@ var
 begin
   json := JSONSerializeObj(ARecordPtr, TypeInfoPtr);
   try
-    Result := json.ToJSON;
+    Result := GetJSONString(json);
   finally
     FreeAndNil(json);
   end;
