@@ -46,12 +46,20 @@ function JSONSerializeObj(ptr, typinf: Pointer): TJSONObject; forward;
 function JSONSerializeInterface(intf: IInterface): TJSONObject; forward;
 
 function TryGetJSONValue(const Root: TJSONObject; const Path: string; var Value: TJSONValue): Boolean;
+{$IF CompilerVersion < 27} //Delphi XE5 or earlier
+var
+  Pair: TJSONPair;
+{$ENDIF}
 begin
 {$IF CompilerVersion > 26} //Delphi XE6 or later.
   Result := Root.TryGetValue(Path, Value);
 {$ELSE}
-  Value := Root.Get(Path).JsonValue;
-  Result := Assigned(Value);
+  Pair := Root.Get(Path);
+  Result := Assigned(Pair);
+  if Result then
+    Value := Pair.JsonValue
+  else
+    Value := nil;
 {$ENDIF}
 end;
 
