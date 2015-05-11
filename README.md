@@ -5,4 +5,4 @@ I built this library so I could have plain old Delphi objects in my application,
 
 There are some simple examples of how to use this library in the test suite.
 
-I have used this library in my Rollbar API for Delphi (link will beinserted here when I have it up on Github).
+I have used this library in my Rollbar API for Delphi (https://github.com/ScottSedgwick/DelphiRollbarApi).
